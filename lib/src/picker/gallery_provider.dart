@@ -88,14 +88,10 @@ class GalleryController extends Notifier<GalleryState> {
     }
   }
 
-  void toggleSelection(AssetEntity asset) {
+  void select(AssetEntity asset) {
     if (state.loading || !state.assets.any((item) => item.id == asset.id)) {
       return;
     }
-    state = GalleryState(
-      assets: state.assets,
-      loading: false,
-      selected: state.selected?.id == asset.id ? null : asset,
-    );
+    state = GalleryState(assets: state.assets, loading: false, selected: asset);
   }
 }

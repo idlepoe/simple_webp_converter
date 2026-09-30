@@ -133,21 +133,57 @@ class _VideoGalleryPickerScreenState
             tooltip: 'Choose file',
           ),
           IconButton(
-            onPressed: _showSettings,
+            onPressed: _confirming ? null : _showSettings,
             icon: const Icon(Icons.tune),
             tooltip: 'Playback layout',
-          ),
-          TextButton(
-            onPressed: _confirming || state.selected == null
-                ? null
-                : () => _confirm(state.selected!),
-            child: const Text('Done'),
           ),
         ],
       ),
       body: _confirming
           ? const Center(child: CircularProgressIndicator())
           : _buildBody(state, groupCount),
+      bottomNavigationBar: state.loading || state.assets.isEmpty
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            state.selected == null
+                                ? 'Select one video'
+                                : state.selected!.title?.isNotEmpty == true
+                                ? state.selected!.title!
+                                : 'Selected video',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          Text(
+                            state.selected == null
+                                ? 'Tap a video or thumbnail.'
+                                : '${state.selected!.duration}s · ${state.selected!.width} × ${state.selected!.height}',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    FilledButton.icon(
+                      onPressed: _confirming || state.selected == null
+                          ? null
+                          : () => _confirm(state.selected!),
+                      icon: const Icon(Icons.check),
+                      label: const Text('Use video'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
     );
   }
 
@@ -219,9 +255,7 @@ class _VideoGalleryPickerScreenState
                 columns: _gridColumns,
                 active: _appActive && group == _currentGroup,
                 selectedIds: selectedIds,
-                onToggleSelection: ref
-                    .read(galleryProvider.notifier)
-                    .toggleSelection,
+                onSelect: ref.read(galleryProvider.notifier).select,
               );
             },
           ),
@@ -244,14 +278,14 @@ class _VideoGalleryPickerScreenState
               key: ValueKey(state.assets[index].id),
               asset: state.assets[index],
               selected: selectedIds.contains(state.assets[index].id),
-              onNavigate: () => _pageController.animateToPage(
-                index ~/ _playbackCount,
-                duration: const Duration(milliseconds: 280),
-                curve: Curves.easeOut,
-              ),
-              onToggleSelection: () => ref
-                  .read(galleryProvider.notifier)
-                  .toggleSelection(state.assets[index]),
+              onNavigate: () {
+                ref.read(galleryProvider.notifier).select(state.assets[index]);
+                _pageController.animateToPage(
+                  index ~/ _playbackCount,
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOut,
+                );
+              },
             ),
           ),
         ),
@@ -321,13 +355,13 @@ class _PlayingVideoGrid extends StatelessWidget {
     required this.columns,
     required this.active,
     required this.selectedIds,
-    required this.onToggleSelection,
+    required this.onSelect,
   });
   final List<AssetEntity> assets;
   final int columns;
   final bool active;
   final Set<String> selectedIds;
-  final ValueChanged<AssetEntity> onToggleSelection;
+  final ValueChanged<AssetEntity> onSelect;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -353,7 +387,7 @@ class _PlayingVideoGrid extends StatelessWidget {
           asset: assets[index],
           active: active,
           selected: selectedIds.contains(assets[index].id),
-          onToggleSelection: () => onToggleSelection(assets[index]),
+          onSelect: () => onSelect(assets[index]),
         ),
       );
     },
@@ -366,12 +400,12 @@ class _PlayingVideoTile extends StatefulWidget {
     required this.asset,
     required this.active,
     required this.selected,
-    required this.onToggleSelection,
+    required this.onSelect,
   });
   final AssetEntity asset;
   final bool active;
   final bool selected;
-  final VoidCallback onToggleSelection;
+  final VoidCallback onSelect;
   @override
   State<_PlayingVideoTile> createState() => _PlayingVideoTileState();
 }
@@ -441,44 +475,63 @@ class _PlayingVideoTileState extends State<_PlayingVideoTile> {
   }
 
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: widget.onToggleSelection,
-    child: Stack(
-      fit: StackFit.expand,
-      children: [
-        FutureBuilder<Uint8List?>(
-          future: _thumbnail,
-          builder: (_, snapshot) => snapshot.data == null
-              ? const Center(child: Icon(Icons.video_file_outlined))
-              : Image.memory(snapshot.data!, fit: BoxFit.contain),
-        ),
-        if (_controller?.value.isInitialized == true)
-          Center(
-            child: AspectRatio(
-              aspectRatio: _controller!.value.aspectRatio,
-              child: VideoPlayer(_controller!),
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: widget.selected,
+    label: widget.asset.title ?? 'Video preview',
+    child: InkWell(
+      onTap: widget.onSelect,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          FutureBuilder<Uint8List?>(
+            future: _thumbnail,
+            builder: (_, snapshot) => snapshot.data == null
+                ? const Center(child: Icon(Icons.video_file_outlined))
+                : Image.memory(snapshot.data!, fit: BoxFit.contain),
+          ),
+          if (_controller?.value.isInitialized == true)
+            Center(
+              child: AspectRatio(
+                aspectRatio: _controller!.value.aspectRatio,
+                child: VideoPlayer(_controller!),
+              ),
+            ),
+          Positioned(
+            left: 8,
+            bottom: 8,
+            child: Chip(
+              label: Text(
+                '${widget.asset.duration ~/ 60}:${(widget.asset.duration % 60).toString().padLeft(2, '0')}',
+              ),
             ),
           ),
-        Positioned(
-          left: 8,
-          bottom: 8,
-          child: Chip(
-            label: Text(
-              '${widget.asset.duration ~/ 60}:${(widget.asset.duration % 60).toString().padLeft(2, '0')}',
+          if (widget.selected)
+            Positioned(
+              right: 8,
+              top: 8,
+              child: const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Icon(Icons.check_circle),
+                ),
+              ),
             ),
-          ),
-        ),
-        Positioned(
-          right: 8,
-          top: 8,
-          child: Card(
-            child: Checkbox(
-              value: widget.selected,
-              onChanged: (_) => widget.onToggleSelection(),
+          if (widget.selected)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 3,
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }
@@ -489,12 +542,10 @@ class _VideoNavigationThumbnail extends StatefulWidget {
     required this.asset,
     required this.selected,
     required this.onNavigate,
-    required this.onToggleSelection,
   });
   final AssetEntity asset;
   final bool selected;
   final VoidCallback onNavigate;
-  final VoidCallback onToggleSelection;
   @override
   State<_VideoNavigationThumbnail> createState() =>
       _VideoNavigationThumbnailState();
@@ -525,13 +576,29 @@ class _VideoNavigationThumbnailState extends State<_VideoNavigationThumbnail> {
                 ? const Icon(Icons.video_file_outlined)
                 : Image.memory(snapshot.data!, fit: BoxFit.cover),
           ),
-          Align(
-            alignment: Alignment.topRight,
-            child: Checkbox(
-              value: widget.selected,
-              onChanged: (_) => widget.onToggleSelection(),
+          if (widget.selected)
+            Align(
+              alignment: Alignment.topRight,
+              child: const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(2),
+                  child: Icon(Icons.check, size: 18),
+                ),
+              ),
             ),
-          ),
+          if (widget.selected)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 3,
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     ),
