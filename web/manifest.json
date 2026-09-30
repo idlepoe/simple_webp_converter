@@ -1,6 +1,6 @@
 {
-    "name": "simple_webp_converter",
-    "short_name": "simple_webp_converter",
+    "name": "VidToWebp",
+    "short_name": "VidToWebp",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
