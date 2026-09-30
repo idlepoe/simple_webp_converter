@@ -274,6 +274,15 @@
 
 SM-S931N 실기기에서 미선택 상태의 `Use video` 비활성화, 미리보기 탭 선택, 다른 썸네일 탭으로 선택 교체와 미리보기 이동, 선택된 영상 재탭 시 선택 유지, 파일명·길이·해상도 표시, 확정 후 메인 화면에 선택한 영상 반영을 확인했다. 선택 화면의 체크박스는 0개이며 선택 테두리와 체크 아이콘의 실제 화면 배치도 확인했다. `flutter analyze --no-pub`와 Android 디버그 APK 빌드가 통과했다. 테스트 파일을 추가하거나 자동 테스트를 실행하지 않았다.
 
+## 릴리스 빌드 Java 호환성 수정 (2026-10-01)
+
+- [x] Android Studio 내장 JBR의 Java 버전 `25.0.3` 및 프로젝트 Gradle 8.14 확인
+- [x] `android/gradle/gradle-daemon-jvm.properties`에 `toolchainVersion=21`을 지정해 Gradle 실행 JDK 고정
+- [x] JDK 21 환경에서 `flutter build apk --release --no-pub` 성공
+- [x] JAVA_HOME을 Android Studio JBR 25.0.3으로 지정한 환경에서도 Gradle이 Java 21 daemon을 선택하고 `assembleRelease` 성공
+
+JDK 21이 설치된 환경에서 사용한다. 특정 PC의 절대 JDK 경로를 프로젝트에 저장하지 않는다. Java 25 launcher의 native-access 경고는 남을 수 있으나 빌드 실패와 구분되며, JDK 21 daemon으로 릴리스 빌드가 완료됐다. 이번 변경은 빌드 JVM 설정만 수정했으며 앱 실행 테스트 또는 자동 테스트를 수행하지 않았다.
+
 ## 체크 기준
 
 - 각 항목은 실제 구현 또는 검증이 완료된 경우에만 체크한다.
