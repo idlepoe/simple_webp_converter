@@ -10,6 +10,7 @@ import 'package:video_player/video_player.dart';
 
 import '../models/selected_video.dart';
 import 'gallery_provider.dart';
+import '../widgets/playful_theme.dart';
 
 // Adapted from video_converter's video_gallery_picker_screen.dart.
 class VideoGalleryPickerScreen extends ConsumerStatefulWidget {
@@ -173,7 +174,7 @@ class _VideoGalleryPickerScreenState
                       ),
                     ),
                     const SizedBox(width: 16),
-                    FilledButton.icon(
+                    PlayfulButton.icon(
                       onPressed: _confirming || state.selected == null
                           ? null
                           : () => _confirm(state.selected!),
@@ -215,7 +216,7 @@ class _VideoGalleryPickerScreenState
               },
               child: const Text('Reload'),
             ),
-            FilledButton(
+            PlayfulButton(
               onPressed: _pickFile,
               child: const Text('Choose file'),
             ),

@@ -5,6 +5,7 @@ enum ConversionStatus {
   idle,
   preparing,
   converting,
+  saving,
   completed,
   cancelled,
   failed,
@@ -37,6 +38,7 @@ class ConverterState {
     this.estimate = const SizeEstimate(),
     this.error,
     this.isLoadingVideo = false,
+    this.isResultSaved = false,
   });
 
   final SelectedVideo? video;
@@ -47,10 +49,12 @@ class ConverterState {
   final SizeEstimate estimate;
   final String? error;
   final bool isLoadingVideo;
+  final bool isResultSaved;
 
   bool get isConverting =>
       status == ConversionStatus.preparing ||
-      status == ConversionStatus.converting;
+      status == ConversionStatus.converting ||
+      status == ConversionStatus.saving;
 
   bool get isBusy => isConverting || isLoadingVideo;
 
@@ -63,6 +67,7 @@ class ConverterState {
     SizeEstimate? estimate,
     Object? error = _unchanged,
     bool? isLoadingVideo,
+    bool? isResultSaved,
   }) => ConverterState(
     video: identical(video, _unchanged) ? this.video : video as SelectedVideo?,
     options: options ?? this.options,
@@ -74,5 +79,6 @@ class ConverterState {
     estimate: estimate ?? this.estimate,
     error: identical(error, _unchanged) ? this.error : error as String?,
     isLoadingVideo: isLoadingVideo ?? this.isLoadingVideo,
+    isResultSaved: isResultSaved ?? this.isResultSaved,
   );
 }

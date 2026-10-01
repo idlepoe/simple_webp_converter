@@ -10,6 +10,7 @@ import '../services/video_metadata_service.dart';
 import '../services/options_repository.dart';
 import '../services/webp_service.dart';
 import '../services/notification_service.dart';
+import '../services/result_service.dart';
 
 final converterProvider = NotifierProvider<ConverterController, ConverterState>(
   ConverterController.new,
@@ -65,9 +66,17 @@ class ConverterController extends Notifier<ConverterState> {
             onProgress: (value) => updateProgress(token, value),
           );
       _ownedResults.add(result.path);
+      if (!_isCurrentConversion(token)) return;
+      state = state.copyWith(status: ConversionStatus.saving, progress: 1);
+      final saved = await _saveResultFile(result.path);
+      if (!_isCurrentConversion(token)) return;
       finishConversion(token, result);
+      state = state.copyWith(
+        isResultSaved: saved,
+        error: saved ? null : _saveError,
+      );
       debugPrint('WebP conversion: ${result.sizeBytes} bytes');
-      await notifications.showCompleted(result.sizeBytes);
+      await notifications.showCompleted(result.sizeBytes, saved: saved);
     } on ConversionCancelled {
       markConversionCancelled(token);
     } catch (error) {
@@ -82,7 +91,34 @@ class ConverterController extends Notifier<ConverterState> {
   }
 
   Future<void> cancel() async {
+    if (state.status == ConversionStatus.saving) return;
     await _operation?.cancel();
+  }
+
+  static const _saveError =
+      'Conversion complete, but unable to save. Check permissions and available storage, then tap Retry save.';
+
+  Future<bool> _saveResultFile(String path) async {
+    try {
+      await ResultService().save(path);
+      return true;
+    } catch (error) {
+      debugPrint('Saving WebP failed: $error');
+      return false;
+    }
+  }
+
+  Future<void> retrySave() async {
+    final result = state.result;
+    if (result == null || state.isBusy || state.isResultSaved) return;
+    state = state.copyWith(status: ConversionStatus.saving, error: null);
+    final saved = await _saveResultFile(result.path);
+    if (!ref.mounted) return;
+    state = state.copyWith(
+      status: ConversionStatus.completed,
+      isResultSaved: saved,
+      error: saved ? null : _saveError,
+    );
   }
 
   Future<void> _deleteFile(String path) async {
@@ -218,6 +254,7 @@ class ConverterController extends Notifier<ConverterState> {
       status: ConversionStatus.preparing,
       progress: 0,
       result: null,
+      isResultSaved: false,
       error: null,
       estimate: const SizeEstimate(),
     );

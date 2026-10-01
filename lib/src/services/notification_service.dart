@@ -48,14 +48,16 @@ class NotificationService {
     }
   }
 
-  Future<void> showCompleted(int bytes) async {
+  Future<void> showCompleted(int bytes, {bool saved = false}) async {
     if (!Platform.isAndroid) return;
     try {
       await (_initialization ??= _initialize());
       await _plugin.show(
         0,
         'Conversion complete',
-        'Your WebP is ready (${(bytes / 1000000).toStringAsFixed(2)} MB).',
+        saved
+            ? 'Your WebP was saved to your gallery (${(bytes / 1000000).toStringAsFixed(2)} MB).'
+            : 'Your WebP is ready, but could not be saved. Open VidToWebp to retry.',
         const NotificationDetails(
           android: AndroidNotificationDetails(
             'webp_conversion_complete',

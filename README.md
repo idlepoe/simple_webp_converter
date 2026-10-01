@@ -11,5 +11,5 @@ Turn a video into an animated WebP.
 - See the estimated file size as you adjust your options.
 - Review options before each conversion and reuse your last settings.
 - View the animated result and its actual file size.
-- Save to your gallery or share the WebP.
+- Automatically save completed WebP files to your gallery, or share them.
 - Receive a notification when conversion finishes.

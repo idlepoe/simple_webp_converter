@@ -14,6 +14,7 @@ import 'widgets/simple_video_player_widget.dart';
 import 'widgets/conversion_options_sheet.dart';
 import 'providers/options_provider.dart';
 import 'services/result_service.dart';
+import 'widgets/playful_theme.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -54,15 +55,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     try {
       final service = ResultService();
       if (save) {
-        await service.save(path);
+        await ref.read(converterProvider.notifier).retrySave();
       } else {
         final box = context.findRenderObject() as RenderBox;
         await service.share(path, box.localToGlobal(Offset.zero) & box.size);
-      }
-      if (mounted && save) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Saved to Pictures/WebP Converter.')),
-        );
       }
     } catch (error) {
       debugPrint('Result action failed: $error');
@@ -179,22 +175,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ? null
         : ref.watch(videoPlayerProvider(video.path));
     return Scaffold(
-      appBar: AppBar(title: const Text('VidToWebp')),
+      appBar: AppBar(
+        title: const Text('VidToWebp'),
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.asset('assets/icon/icon.png'),
+          ),
+        ),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
             if (video == null)
-              const Card(
+              Card(
+                color: const Color(0xFFEDFACD),
                 child: Padding(
-                  padding: EdgeInsets.all(24),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 36,
+                  ),
                   child: Column(
                     children: [
-                      Icon(Icons.video_library_outlined, size: 48),
-                      SizedBox(height: 16),
-                      Text('Select a video to convert to WebP.'),
-                      SizedBox(height: 8),
-                      Text('You can select one video at a time.'),
+                      const Icon(
+                        Icons.movie_creation_rounded,
+                        size: 80,
+                        color: Color(0xFF58A700),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Make your video pop!',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Pick a video. Make a WebP.\nSaved to your gallery, just like that.',
+                        textAlign: TextAlign.center,
+                      ),
                     ],
                   ),
                 ),
@@ -225,7 +245,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ),
               ),
             const SizedBox(height: 16),
-            FilledButton.icon(
+            PlayfulButton.icon(
               onPressed: state.isBusy || _routeOpen ? null : _pickVideo,
               icon: const Icon(Icons.folder_open),
               label: Text(
@@ -242,7 +262,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 label: const Text('Edit video'),
               ),
               const SizedBox(height: 8),
-              FilledButton.icon(
+              PlayfulButton.icon(
                 onPressed: state.isBusy || _routeOpen || _resultBusy
                     ? null
                     : _convert,
@@ -255,19 +275,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               Text(
                 state.status == ConversionStatus.preparing
                     ? 'Preparing conversion'
+                    : state.status == ConversionStatus.saving
+                    ? 'Saving to gallery'
                     : 'Converting',
               ),
               const SizedBox(height: 8),
               LinearProgressIndicator(
-                value: state.status == ConversionStatus.preparing
+                value:
+                    state.status == ConversionStatus.preparing ||
+                        state.status == ConversionStatus.saving
                     ? null
                     : state.progress,
               ),
               Text('${(state.progress * 100).round()}%'),
-              OutlinedButton(
-                onPressed: () => ref.read(converterProvider.notifier).cancel(),
-                child: const Text('Cancel'),
-              ),
+              if (state.status != ConversionStatus.saving)
+                OutlinedButton(
+                  onPressed: () =>
+                      ref.read(converterProvider.notifier).cancel(),
+                  child: const Text('Cancel'),
+                ),
             ],
             if (state.status == ConversionStatus.cancelled)
               const Text('Conversion cancelled.'),
@@ -283,6 +309,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ),
               ),
+              if (state.isResultSaved)
+                const Text('Saved to Pictures/WebP Converter.'),
               Image.file(
                 File(result.path),
                 key: ValueKey(result.path),
@@ -295,12 +323,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               Wrap(
                 spacing: 8,
                 children: [
-                  FilledButton(
-                    onPressed: _resultBusy || state.isBusy
-                        ? null
-                        : () => _useResult(result.path, true),
-                    child: const Text('Save'),
-                  ),
+                  if (!state.isResultSaved)
+                    PlayfulButton(
+                      onPressed: _resultBusy || state.isBusy
+                          ? null
+                          : () => _useResult(result.path, true),
+                      child: const Text('Retry save'),
+                    ),
                   OutlinedButton(
                     onPressed: _resultBusy || state.isBusy
                         ? null
