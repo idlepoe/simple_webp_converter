@@ -283,18 +283,12 @@ SM-S931N 실기기에서 미선택 상태의 `Use video` 비활성화, 미리보
 
 JDK 21이 설치된 환경에서 사용한다. 특정 PC의 절대 JDK 경로를 프로젝트에 저장하지 않는다. Java 25 launcher의 native-access 경고는 남을 수 있으나 빌드 실패와 구분되며, JDK 21 daemon으로 릴리스 빌드가 완료됐다. 이번 변경은 빌드 JVM 설정만 수정했으며 앱 실행 테스트 또는 자동 테스트를 수행하지 않았다.
 
-## GitHub Actions CI/CD 추가 (2026-10-01)
+## CI/CD 제거 및 병합 충돌 해결 (2026-10-01)
 
-- [x] main/master push, PR, 수동 실행 시 정적 분석·디버그 APK 빌드 워크플로 추가
-- [x] vX.Y.Z 태그 push 시 버전 일치 확인·서명된 릴리스 APK 빌드·GitHub Release 게시·SHA-256 체크섬 첨부
-- [x] Flutter 3.41.9/JDK 21 고정 및 CI Gradle heap 4 GB 제한
-- [x] 환경 변수 기반 서명 설정 추가, 릴리스 CI에서 서명 필수 처리 및 키 정리
-- [x] 별도 배포 설정 문서 `docs/releasing.md` 작성
-- [x] 로컬 정적 분석·릴리스 APK 빌드 통과
-- [x] 두 워크플로 YAML 및 내장 Python 스크립트 문법 확인
-- [ ] 저장소 Secrets 등록 후 실제 GitHub Actions 실행·Release 게시 확인
-
-서명 키 내용은 읽거나 출력하지 않았으며 저장소에 추가하지 않았다. 기존 로컬 `key.properties` 서명도 유지한다. 자동 테스트 파일이나 기능 테스트를 추가하지 않았다. GitHub에 push하거나 태그·Release를 생성하지 않았으며, 원격 실행 검증은 서명 Secrets 등록과 워크플로 push 후 가능하다.
+- [x] GitHub Actions 워크플로와 배포 안내 삭제
+- [x] CI 전용 환경 변수 서명 설정 제거, 기존 로컬 key.properties 서명 유지
+- [x] Gradle 설정 및 진행 기록의 충돌 마커 제거
+- [x] 릴리스 APK 빌드 통과 및 Git 충돌 해결 상태 스테이징
 
 ## 체크 기준
 

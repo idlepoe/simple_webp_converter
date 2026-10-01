@@ -12,17 +12,6 @@ val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
-val environmentKeystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
-val useEnvironmentSigning = !environmentKeystorePath.isNullOrBlank()
-val hasReleaseSigning = useEnvironmentSigning || keystorePropertiesFile.exists()
-if (System.getenv("REQUIRE_RELEASE_SIGNING") == "true" && !hasReleaseSigning) {
-    error("Release signing is required. Configure Android signing secrets.")
-}
-fun signingValue(environmentName: String, propertyName: String): String =
-    (if (useEnvironmentSigning) System.getenv(environmentName) else keystoreProperties.getProperty(propertyName))
-        ?.takeIf { it.isNotBlank() }
-        ?: error("Missing release signing value: $propertyName")
-
 android {
     namespace = "com.jylee.simple_webp_converter"
     compileSdk = flutter.compileSdkVersion
@@ -50,19 +39,19 @@ android {
     }
 
     signingConfigs {
-        if (hasReleaseSigning) {
+        if (keystorePropertiesFile.exists()) {
             create("release") {
-                keyAlias = signingValue("ANDROID_KEY_ALIAS", "keyAlias")
-                keyPassword = signingValue("ANDROID_KEY_PASSWORD", "keyPassword")
-                storeFile = file(signingValue("ANDROID_KEYSTORE_PATH", "storeFile"))
-                storePassword = signingValue("ANDROID_STORE_PASSWORD", "storePassword")
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = keystoreProperties["storeFile"]?.let { file(it as String) }
+                storePassword = keystoreProperties["storePassword"] as String
             }
         }
     }
 
     buildTypes {
         release {
-            signingConfig = if (hasReleaseSigning) {
+            signingConfig = if (keystorePropertiesFile.exists()) {
                 signingConfigs.getByName("release")
             } else {
                 // Keep local release builds installable when no private release key is configured.
